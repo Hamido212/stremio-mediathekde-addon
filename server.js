@@ -194,6 +194,28 @@ app.get('/manifest.json', (req, res) => {
     res.json(manifest);
 });
 
+// Konfiguriertes Manifest
+app.get('/:config/manifest.json', (req, res) => {
+    try {
+        const userConfig = ConfigHandler.parseConfig(req.params.config);
+        
+        // Erstelle angepasstes Manifest (gleiche Struktur, aber mit Config in ID)
+        const customManifest = {
+            ...manifest,
+            id: `${manifest.id}.${req.params.config.substring(0, 8)}`,
+            behaviorHints: {
+                ...manifest.behaviorHints,
+                configurationRequired: false
+            }
+        };
+        
+        res.json(customManifest);
+    } catch (error) {
+        logger.error('Config Manifest Error', { error: error.message });
+        res.status(400).json({ error: 'Invalid configuration' });
+    }
+});
+
 // Stremio Add-on Routes (catalog, meta, stream)
 app.get('/:resource/:type/:id/:extra?.json', async (req, res) => {
     try {
@@ -219,6 +241,37 @@ app.get('/:resource/:type/:id/:extra?.json', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// Konfigurierte Stremio Routes
+app.get('/:config/:resource/:type/:id/:extra?.json', async (req, res) => {
+    try {
+        const { config, resource, type, id } = req.params;
+        const extra = req.params.extra ? JSON.parse(decodeURIComponent(req.params.extra)) : {};
+        
+        // Parse User Config
+        const userConfig = ConfigHandler.parseConfig(config);
+        
+        // Add config to extra
+        const args = { resource, type, id, extra: { ...extra, userConfig } };
+        let result;
+        
+        if (resource === 'catalog') {
+            result = await addonInterface.catalog(args);
+        } else if (resource === 'meta') {
+            result = await addonInterface.meta(args);
+        } else if (resource === 'stream') {
+            result = await addonInterface.stream(args);
+        } else {
+            return res.status(404).json({ error: 'Resource not found' });
+        }
+        
+        res.json(result);
+    } catch (error) {
+        logger.error('Configured Request error', { error: error.message, stack: error.stack });
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Server starten
 const server = app.listen(PORT, () => {
     logger.info('Server gestartet', {
