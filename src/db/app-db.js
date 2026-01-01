@@ -2,6 +2,8 @@
 
 const Database = require('better-sqlite3');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const logger = require('../logger');
 
 class AppDB {
@@ -15,6 +17,12 @@ class AppDB {
      */
     open() {
         try {
+            // Ensure directory exists
+            const dir = path.dirname(this.dbPath);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+            
             this.db = new Database(this.dbPath);
             this.db.pragma('journal_mode = WAL');
             logger.info('App-DB geöffnet', { dbPath: this.dbPath });
