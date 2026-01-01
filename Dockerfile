@@ -1,6 +1,9 @@
 # Verwende offizielles Node.js 18 Alpine Image (klein & effizient)
 FROM node:18-alpine
 
+# Installiere bzip2 für Dekompression
+RUN apk add --no-cache bzip2
+
 # Setze Arbeitsverzeichnis
 WORKDIR /app
 
