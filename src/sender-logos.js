@@ -1,6 +1,6 @@
 // Sender-Logo Mapping
 
-const LOGO_BASE_URL = 'https://raw.githubusercontent.com/jnk22/kodinerds-iptv/master/logos/tv';
+const LOGO_BASE_URL = 'https://cdn.jsdelivr.net/gh/jnk22/kodinerds-iptv@master/logos/tv';
 
 const SENDER_LOGOS = {
     // ARD Familie
