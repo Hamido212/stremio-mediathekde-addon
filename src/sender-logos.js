@@ -1,37 +1,37 @@
 // Sender-Logo Mapping
 
-const LOGO_BASE_URL = 'https://raw.githubusercontent.com/jnk22/kodinerds-iptv/master/logos';
+const LOGO_BASE_URL = 'https://raw.githubusercontent.com/jnk22/kodinerds-iptv/master/logos/tv';
 
 const SENDER_LOGOS = {
     // ARD Familie
-    'ARD': `${LOGO_BASE_URL}/de/ard.png`,
-    'Das Erste': `${LOGO_BASE_URL}/de/ard.png`,
-    'tagesschau24': `${LOGO_BASE_URL}/de/tagesschau24.png`,
-    'ARD-alpha': `${LOGO_BASE_URL}/de/ardalpha.png`,
-    'ONE': `${LOGO_BASE_URL}/de/one.png`,
+    'ARD': `${LOGO_BASE_URL}/ard.png`,
+    'Das Erste': `${LOGO_BASE_URL}/ard.png`,
+    'tagesschau24': `${LOGO_BASE_URL}/tagesschau24.png`,
+    'ARD-alpha': `${LOGO_BASE_URL}/ardalpha.png`,
+    'ONE': `${LOGO_BASE_URL}/one.png`,
     
     // Dritte Programme
-    'BR': `${LOGO_BASE_URL}/de/br.png`,
-    'HR': `${LOGO_BASE_URL}/de/hr.png`,
-    'MDR': `${LOGO_BASE_URL}/de/mdr.png`,
-    'NDR': `${LOGO_BASE_URL}/de/ndr.png`,
-    'RBB': `${LOGO_BASE_URL}/de/rbb.png`,
-    'SR': `${LOGO_BASE_URL}/de/sr.png`,
-    'SWR': `${LOGO_BASE_URL}/de/swr.png`,
-    'WDR': `${LOGO_BASE_URL}/de/wdr.png`,
+    'BR': `${LOGO_BASE_URL}/br.png`,
+    'HR': `${LOGO_BASE_URL}/hr.png`,
+    'MDR': `${LOGO_BASE_URL}/mdr.png`,
+    'NDR': `${LOGO_BASE_URL}/ndr.png`,
+    'RBB': `${LOGO_BASE_URL}/rbb.png`,
+    'SR': `${LOGO_BASE_URL}/sr.png`,
+    'SWR': `${LOGO_BASE_URL}/swr.png`,
+    'WDR': `${LOGO_BASE_URL}/wdr.png`,
     
     // ZDF Familie
-    'ZDF': `${LOGO_BASE_URL}/de/zdf.png`,
-    'ZDFneo': `${LOGO_BASE_URL}/de/zdfneo.png`,
-    'ZDFinfo': `${LOGO_BASE_URL}/de/zdfinfo.png`,
-    'phoenix': `${LOGO_BASE_URL}/de/phoenix.png`,
+    'ZDF': `${LOGO_BASE_URL}/zdf.png`,
+    'ZDFneo': `${LOGO_BASE_URL}/zdfneo.png`,
+    'ZDFinfo': `${LOGO_BASE_URL}/zdfinfo.png`,
+    'phoenix': `${LOGO_BASE_URL}/phoenix.png`,
     
     // Weitere
-    'arte': `${LOGO_BASE_URL}/de/arte.png`,
-    'ARTE': `${LOGO_BASE_URL}/de/arte.png`,
-    'Arte': `${LOGO_BASE_URL}/de/arte.png`,
-    '3sat': `${LOGO_BASE_URL}/de/3sat.png`,
-    'KiKA': `${LOGO_BASE_URL}/de/kika.png`,
+    'arte': `${LOGO_BASE_URL}/arte.png`,
+    'ARTE': `${LOGO_BASE_URL}/arte.png`,
+    'Arte': `${LOGO_BASE_URL}/arte.png`,
+    '3sat': `${LOGO_BASE_URL}/3sat.png`,
+    'KiKA': `${LOGO_BASE_URL}/kika.png`,
     
     // Fallback
     'default': 'https://via.placeholder.com/300x450/1a1a1a/ffffff?text=Mediathek'
