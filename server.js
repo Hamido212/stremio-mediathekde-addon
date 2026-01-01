@@ -1,4 +1,4 @@
-// Stremio Add-on für Deutsche Mediatheken (lokale SQLite DB)
+    // Stremio Add-on für Deutsche Mediatheken (lokale SQLite DB)
 
 const express = require('express');
 const { addonBuilder } = require('stremio-addon-sdk');
@@ -38,6 +38,18 @@ const addonInterface = builder.getInterface();
 // Express App erstellen
 const app = express();
 const PORT = config.PORT;
+
+// CORS Middleware
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
 const landingHTML = `
 <!DOCTYPE html>
 <html>
@@ -217,20 +229,26 @@ app.get('/:config/manifest.json', (req, res) => {
 });
 
 // Stremio Add-on Routes (catalog, meta, stream)
-app.get('/:resource/:type/:id/:extra?.json', async (req, res) => {
+app.get('/:resource/:type/:id.json', async (req, res) => {
     try {
         const { resource, type, id } = req.params;
-        const extra = req.params.extra ? JSON.parse(decodeURIComponent(req.params.extra)) : {};
+        
+        // Extras kommen als Query-Parameter, nicht als JSON im Path
+        const extra = {
+            search: typeof req.query.search === 'string' ? req.query.search : undefined,
+            genre: typeof req.query.genre === 'string' ? req.query.genre : undefined,
+            skip: Number(req.query.skip || 0)
+        };
         
         const args = { resource, type, id, extra };
         let result;
         
         if (resource === 'catalog') {
-            result = await addonInterface.catalog(args);
+            result = await Handlers.handleCatalog(args);
         } else if (resource === 'meta') {
-            result = await addonInterface.meta(args);
+            result = await Handlers.handleMeta(args);
         } else if (resource === 'stream') {
-            result = await addonInterface.stream(args);
+            result = await Handlers.handleStream(args);
         } else {
             return res.status(404).json({ error: 'Resource not found' });
         }
@@ -243,10 +261,16 @@ app.get('/:resource/:type/:id/:extra?.json', async (req, res) => {
 });
 
 // Konfigurierte Stremio Routes
-app.get('/:config/:resource/:type/:id/:extra?.json', async (req, res) => {
+app.get('/:config/:resource/:type/:id.json', async (req, res) => {
     try {
         const { config, resource, type, id } = req.params;
-        const extra = req.params.extra ? JSON.parse(decodeURIComponent(req.params.extra)) : {};
+        
+        // Extras kommen als Query-Parameter
+        const extra = {
+            search: typeof req.query.search === 'string' ? req.query.search : undefined,
+            genre: typeof req.query.genre === 'string' ? req.query.genre : undefined,
+            skip: Number(req.query.skip || 0)
+        };
         
         // Parse User Config
         const userConfig = ConfigHandler.parseConfig(config);
@@ -256,11 +280,11 @@ app.get('/:config/:resource/:type/:id/:extra?.json', async (req, res) => {
         let result;
         
         if (resource === 'catalog') {
-            result = await addonInterface.catalog(args);
+            result = await Handlers.handleCatalog(args);
         } else if (resource === 'meta') {
-            result = await addonInterface.meta(args);
+            result = await Handlers.handleMeta(args);
         } else if (resource === 'stream') {
-            result = await addonInterface.stream(args);
+            result = await Handlers.handleStream(args);
         } else {
             return res.status(404).json({ error: 'Resource not found' });
         }

@@ -206,8 +206,8 @@ class Handlers {
             type: 'movie',
             name: item.title || 'Unbekannt',
             description: this._buildFullDescription(item),
-            poster: item.poster,
-            background: item.poster,
+            poster: item.poster || senderLogos.getLogo(item.channel),
+            background: item.poster || senderLogos.getLogo(item.channel),
             releaseInfo: item.date_ts 
                 ? new Date(item.date_ts * 1000).toLocaleDateString('de-DE')
                 : null,
@@ -226,7 +226,7 @@ class Handlers {
             id: item.id,
             type: 'movie',
             name: item.title || 'Unbekannt',
-            poster: item.poster,
+            poster: item.poster || senderLogos.getLogo(item.channel),
             description: item.description ? item.description.substring(0, 200) + '...' : null,
             releaseInfo: item.date_ts 
                 ? new Date(item.date_ts * 1000).getFullYear().toString()
