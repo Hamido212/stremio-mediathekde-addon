@@ -111,20 +111,17 @@ class Importer {
     _detectColumnMapping(columns) {
         const columnNames = columns.map(c => c.name.toLowerCase());
         
-        // Debug: Alle verfügbaren Spalten loggen
-        logger.info('Verfügbare DB-Spalten', { columns: columnNames });
-        
         const mapping = {
             title: this._findColumn(columnNames, ['title', 'titel', 'thema']),
-            channel: this._findColumn(columnNames, ['channel', 'sender']),
-            topic: this._findColumn(columnNames, ['topic', 'thema']),
+            channel: this._findColumn(columnNames, ['channel', 'sender', 'channelid']),
+            topic: this._findColumn(columnNames, ['topic', 'thema', 'showid']),
             description: this._findColumn(columnNames, ['description', 'beschreibung']),
-            date_ts: this._findColumn(columnNames, ['timestamp', 'datum', 'date', 'zeit', 'time']),
+            date_ts: this._findColumn(columnNames, ['aired', 'timestamp', 'datum', 'date', 'zeit', 'time']),
             duration: this._findColumn(columnNames, ['duration', 'dauer']),
             url_video: this._findColumn(columnNames, ['url_video', 'url', 'url_video_hd']),
             url_website: this._findColumn(columnNames, ['url_website', 'website']),
             is_hd: this._findColumn(columnNames, ['url_video_hd', 'hd']),
-            has_subtitles: this._findColumn(columnNames, ['url_subtitle', 'untertitel'])
+            has_subtitles: this._findColumn(columnNames, ['url_subtitle', 'url_sub', 'untertitel'])
         };
 
         return mapping;
@@ -149,8 +146,16 @@ class Importer {
         const columns = [];
         for (const [key, sourceColumn] of Object.entries(mapping)) {
             if (sourceColumn) {
+                // Für channelid: Lass die Spalte als ist, wir konvertieren später
                 columns.push(`${sourceColumn} as ${key}`);
             }
+        }
+
+        // JOIN mit channel-Tabelle falls channelid vorhanden
+        if (mapping.channel === 'channelid') {
+            return `SELECT ${columns.join(', ')}, c.name as channel_name 
+                    FROM ${tableName} 
+                    LEFT JOIN channel c ON ${tableName}.channelid = c.id`;
         }
 
         return `SELECT ${columns.join(', ')} FROM ${tableName}`;
@@ -162,7 +167,8 @@ class Importer {
     _transformRow(row, mapping) {
         try {
             const title = row.title;
-            const channel = row.channel;
+            // Verwende channel_name vom JOIN falls vorhanden, sonst channel ID
+            const channel = row.channel_name || row.channel;
             const url_website = row.url_website;
             const url_video = row.url_video;
 
