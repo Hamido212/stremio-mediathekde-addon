@@ -29,7 +29,16 @@ const CHANNEL_ID_MAP = {
     18: 'ONE',
     19: 'ZDFneo',
     20: 'ZDFinfo',
-    21: 'Funk'
+    21: 'Funk',
+    22: 'DW (Deutsch)',
+    23: 'ORF',
+    24: 'SRF',
+    25: 'rbtv',
+    26: 'ServusTV',
+    27: 'KabelEins',
+    28: 'Sport1',
+    29: 'Eurosport',
+    30: 'DW (English)'
 };
 
 class Importer {
