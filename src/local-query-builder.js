@@ -23,17 +23,17 @@ class LocalQueryBuilder {
     }
 
     /**
-     * Catalog Query - Neue Inhalte (7 Tage)
+     * Catalog Query - Neue Inhalte (30 Tage)
      */
     queryCatalogNew(filters = {}) {
         const db = this._getDb();
         
-        const sevenDaysAgo = Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60);
+        const thirtyDaysAgo = Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60);
         const limit = filters.limit || 20;
         const skip = filters.skip || 0;
 
         let sql = 'SELECT * FROM items WHERE date_ts >= ?';
-        const params = [sevenDaysAgo];
+        const params = [thirtyDaysAgo];
 
         // Genre-Filter (Sender oder Kategorie)
         if (filters.genre) {

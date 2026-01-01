@@ -31,7 +31,7 @@ const CATALOGS = [
     {
         type: 'movie',
         id: 'de_new',
-        name: '🆕 Neu (7 Tage)',
+        name: '🆕 Neu (30 Tage)',
         extraSupported: ['genre', 'skip']
     },
     {
