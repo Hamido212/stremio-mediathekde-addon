@@ -95,9 +95,14 @@ class Downloader {
                 logger.info('Windows erkannt, verwende unbzip2-stream');
                 useExternalTool = false;
             } else {
-                // Linux/Mac: Verwende immer unbzip2-stream (zuverlässiger)
-                logger.info('Verwende unbzip2-stream (zuverlässiger als bzip2)');
-                useExternalTool = false;
+                // Linux/Mac: bzip2 (zuverlässiger als unbzip2-stream)
+                if (this._commandExists('bzip2')) {
+                    command = 'bzip2';
+                    args = ['-d', '-c', sourcePath];
+                } else {
+                    logger.info('bzip2 nicht gefunden, verwende unbzip2-stream');
+                    useExternalTool = false;
+                }
             }
 
             // Fallback: Node.js Stream-basiert
