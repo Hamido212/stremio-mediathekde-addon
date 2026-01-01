@@ -111,12 +111,15 @@ class Importer {
     _detectColumnMapping(columns) {
         const columnNames = columns.map(c => c.name.toLowerCase());
         
+        // Debug: Alle verfügbaren Spalten loggen
+        logger.info('Verfügbare DB-Spalten', { columns: columnNames });
+        
         const mapping = {
             title: this._findColumn(columnNames, ['title', 'titel', 'thema']),
             channel: this._findColumn(columnNames, ['channel', 'sender']),
             topic: this._findColumn(columnNames, ['topic', 'thema']),
             description: this._findColumn(columnNames, ['description', 'beschreibung']),
-            date_ts: this._findColumn(columnNames, ['timestamp', 'datum', 'date', 'zeit']),
+            date_ts: this._findColumn(columnNames, ['timestamp', 'datum', 'date', 'zeit', 'time']),
             duration: this._findColumn(columnNames, ['duration', 'dauer']),
             url_video: this._findColumn(columnNames, ['url_video', 'url', 'url_video_hd']),
             url_website: this._findColumn(columnNames, ['url_website', 'website']),
