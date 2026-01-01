@@ -5,6 +5,7 @@ const IdGenerator = require('./id-generator');
 const cache = require('./cache');
 const config = require('./config');
 const logger = require('./logger');
+const senderLogos = require('./sender-logos');
 
 const queryBuilder = new LocalQueryBuilder();
 
