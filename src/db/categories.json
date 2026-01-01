@@ -1,0 +1,85 @@
+{
+  "categories": {
+    "News": {
+      "priority": 100,
+      "rules": [
+        {
+          "field": "topic",
+          "match": ["tagesschau", "heute", "heute journal", "tagesthemen", "morgenmagazin", "brennpunkt"]
+        },
+        {
+          "field": "title",
+          "match": ["nachrichten", "news", "bericht aus", "politik direkt", "spezial"]
+        }
+      ]
+    },
+    "Doku": {
+      "priority": 90,
+      "rules": [
+        {
+          "field": "topic",
+          "match": ["doku", "dokumentation", "reportage", "dokumentarfilm", "terra x", "planet"]
+        },
+        {
+          "field": "title",
+          "match": ["reportage", "expedition", "entdeckung"]
+        }
+      ]
+    },
+    "Wissen": {
+      "priority": 80,
+      "rules": [
+        {
+          "field": "topic",
+          "match": ["quarks", "nano", "galileo", "wissen", "alpha", "lesch", "bildung", "geschichte"]
+        },
+        {
+          "field": "title",
+          "match": ["wissenschaft", "universum", "natur", "kultur"]
+        }
+      ]
+    },
+    "Krimi": {
+      "priority": 70,
+      "rules": [
+        {
+          "field": "topic",
+          "match": ["tatort", "polizeiruf", "soko", "kommissar"]
+        },
+        {
+          "field": "title",
+          "match": ["krimi", "thriller", "mord", "inspektor", "detektiv", "crime"]
+        }
+      ]
+    },
+    "Kinder": {
+      "priority": 60,
+      "rules": [
+        {
+          "field": "channel",
+          "match": ["kika", "zdf tivi"]
+        },
+        {
+          "field": "topic",
+          "match": ["sendung mit der maus", "löwenzahn", "sesamstraße", "kinder", "jugend", "logo!"]
+        },
+        {
+          "field": "title",
+          "match": ["kinderfilm", "märchen", "checker"]
+        }
+      ]
+    },
+    "Arte": {
+      "priority": 50,
+      "rules": [
+        {
+          "field": "channel",
+          "match": ["arte"]
+        }
+      ]
+    }
+  },
+  "senders": [
+    "ARD", "ZDF", "arte", "3sat", "WDR", "NDR", "BR", "SWR", "MDR", "HR", "RBB", "KiKA", "phoenix", "ZDFinfo", "ZDFneo"
+  ]
+}
