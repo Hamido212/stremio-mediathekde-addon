@@ -7,6 +7,31 @@ const AppDB = require('./app-db');
 const logger = require('../logger');
 const senderLogos = require('../sender-logos');
 
+// MediathekView Channel ID → Name Mapping
+const CHANNEL_ID_MAP = {
+    1: 'ARD',
+    2: 'ZDF',
+    3: 'arte',
+    4: '3sat',
+    5: 'BR',
+    6: 'HR',
+    7: 'MDR',
+    8: 'NDR',
+    9: 'Radio Bremen TV',
+    10: 'RBB',
+    11: 'SR',
+    12: 'SWR',
+    13: 'WDR',
+    14: 'KIKA',
+    15: 'Phoenix',
+    16: 'tagesschau24',
+    17: 'ARD-alpha',
+    18: 'ONE',
+    19: 'ZDFneo',
+    20: 'ZDFinfo',
+    21: 'Funk'
+};
+
 class Importer {
     constructor(sourceDbPath, appDbPath, categoriesConfigPath) {
         this.sourceDbPath = sourceDbPath;
@@ -146,16 +171,8 @@ class Importer {
         const columns = [];
         for (const [key, sourceColumn] of Object.entries(mapping)) {
             if (sourceColumn) {
-                // Für channelid: Lass die Spalte als ist, wir konvertieren später
                 columns.push(`${sourceColumn} as ${key}`);
             }
-        }
-
-        // JOIN mit channel-Tabelle falls channelid vorhanden
-        if (mapping.channel === 'channelid') {
-            return `SELECT ${columns.join(', ')}, c.name as channel_name 
-                    FROM ${tableName} 
-                    LEFT JOIN channel c ON ${tableName}.channelid = c.id`;
         }
 
         return `SELECT ${columns.join(', ')} FROM ${tableName}`;
@@ -167,8 +184,9 @@ class Importer {
     _transformRow(row, mapping) {
         try {
             const title = row.title;
-            // Verwende channel_name vom JOIN falls vorhanden, sonst channel ID
-            const channel = row.channel_name || row.channel;
+            // Map channelid zu Channel-Name
+            const channelId = parseInt(row.channel);
+            const channel = CHANNEL_ID_MAP[channelId] || `Channel ${channelId}`;
             const url_website = row.url_website;
             const url_video = row.url_video;
 
