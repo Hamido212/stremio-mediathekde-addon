@@ -204,10 +204,17 @@ class Importer {
                 return null;
             }
 
-            // Date Timestamp normalisieren
+            // Date Timestamp normalisieren und validieren
             let date_ts = row.date_ts;
             if (typeof date_ts === 'string') {
                 date_ts = Math.floor(new Date(date_ts).getTime() / 1000);
+            }
+            
+            // Validiere Timestamp (plausibel zwischen 2000 und 2030)
+            const MIN_TS = 946684800;  // 1.1.2000
+            const MAX_TS = 1893456000; // 1.1.2030
+            if (!date_ts || date_ts < MIN_TS || date_ts > MAX_TS) {
+                date_ts = null;
             }
 
             // Category klassifizieren
