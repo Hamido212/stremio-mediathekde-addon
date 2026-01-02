@@ -236,39 +236,42 @@ app.get('/:resource/:type/*.json', async (req, res) => {
         // params[0] enthält den wildcard-Teil (alles zwischen type/ und .json)
         const idWithPath = req.params[0];
         
-        // Parse extra from ID (format: "catalogId:base64json" or "catalogId/key=value/key=value")
+        // Parse extra from ID (nur für catalog, nicht für meta/stream)
         let catalogId = idWithPath;
         let extra = {};
         
-        if (idWithPath.includes(':')) {
-            // Base64-encoded JSON (z.B. "de_kids:eyJza2lwIjoyMH0")
-            const parts = idWithPath.split(':');
-            catalogId = parts[0];
-            try {
-                const decoded = Buffer.from(parts[1], 'base64').toString('utf8');
-                extra = JSON.parse(decoded);
-            } catch (e) {
-                logger.warn('Failed to parse base64 extra', { id: idWithPath, error: e.message });
-            }
-        } else if (idWithPath.includes('/')) {
-            // Key=value pairs (z.B. "de_kids/skip=20")
-            const parts = idWithPath.split('/');
-            catalogId = parts[0];
-            for (let i = 1; i < parts.length; i++) {
-                const [key, value] = parts[i].split('=');
-                if (key && value !== undefined) {
-                    extra[key] = isNaN(value) ? value : Number(value);
+        if (resource === 'catalog') {
+            // Nur bei Katalog-Requests extra parsen
+            if (idWithPath.includes(':')) {
+                // Base64-encoded JSON (z.B. "de_kids:eyJza2lwIjoyMH0")
+                const parts = idWithPath.split(':');
+                catalogId = parts[0];
+                try {
+                    const decoded = Buffer.from(parts[1], 'base64').toString('utf8');
+                    extra = JSON.parse(decoded);
+                } catch (e) {
+                    logger.warn('Failed to parse base64 extra', { id: idWithPath, error: e.message });
+                }
+            } else if (idWithPath.includes('/')) {
+                // Key=value pairs (z.B. "de_kids/skip=20")
+                const parts = idWithPath.split('/');
+                catalogId = parts[0];
+                for (let i = 1; i < parts.length; i++) {
+                    const [key, value] = parts[i].split('=');
+                    if (key && value !== undefined) {
+                        extra[key] = isNaN(value) ? value : Number(value);
+                    }
                 }
             }
-        }
-        
-        // Fallback: Query-Parameter (für manuelles Testen)
-        if (Object.keys(extra).length === 0) {
-            extra = {
-                search: req.query.search,
-                genre: req.query.genre,
-                skip: Number(req.query.skip || 0)
-            };
+            
+            // Fallback: Query-Parameter (für manuelles Testen)
+            if (Object.keys(extra).length === 0) {
+                extra = {
+                    search: req.query.search,
+                    genre: req.query.genre,
+                    skip: Number(req.query.skip || 0)
+                };
+            }
         }
         
         const args = { resource, type, id: catalogId, extra };
