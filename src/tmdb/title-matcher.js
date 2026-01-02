@@ -149,8 +149,8 @@ class TitleMatcher {
     static isGeneric(title) {
         const genericPatterns = [
             /^(tagesschau|heute|tagesthemen|morgenmagazin|mittagsmagazin)$/i,
-            /^(nachrichten|wetter|börse|sport)$/i,
-            /^(live|reportage|dokumentation|doku)$/i,
+            /^(nachrichten|wetter|börse)$/i,
+            /^(live)$/i,  // Nur "live" alleine, nicht "Live at..."
             /^\d{1,2}\.\d{1,2}\.\d{4}$/,  // Nur Datum
             /^[A-Z]{2,5}$/                 // Nur Abkürzung (ARD, ZDF, etc.)
         ];

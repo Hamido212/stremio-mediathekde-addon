@@ -48,7 +48,7 @@ class Importer {
         this.appDbPath = appDbPath;
         this.classifier = new Classifier(categoriesConfigPath);
         this.posterFetcher = options.tmdbApiKey 
-            ? new PosterFetcher(options.tmdbApiKey, { minSimilarity: 0.7 })
+            ? new PosterFetcher(options.tmdbApiKey, { minSimilarity: 0.6 })
             : null;
         this.enablePosterFetch = !!options.tmdbApiKey;
     }
@@ -273,14 +273,23 @@ class Importer {
      */
     async _fetchPosters(appDb) {
         try {
-            // Hole Items ohne Poster (Sample: 1000 Items, priorisiere neue)
+            // Hole Items ohne Poster - priorisiere Kategorien mit höherer TMDB-Trefferrate
             const db = appDb.db;
             const itemsWithoutPoster = db.prepare(`
-                SELECT id, title, channel, topic, date_ts 
+                SELECT id, title, channel, topic, date_ts, category
                 FROM items 
                 WHERE poster IS NULL 
-                ORDER BY date_ts DESC 
-                LIMIT 1000
+                AND category IN ('Krimi', 'Doku', 'Kinder', 'Wissen', 'Kultur')
+                ORDER BY 
+                    CASE category
+                        WHEN 'Krimi' THEN 1
+                        WHEN 'Kinder' THEN 2
+                        WHEN 'Doku' THEN 3
+                        WHEN 'Kultur' THEN 4
+                        WHEN 'Wissen' THEN 5
+                    END,
+                    date_ts DESC 
+                LIMIT 2000
             `).all();
 
             if (itemsWithoutPoster.length === 0) {

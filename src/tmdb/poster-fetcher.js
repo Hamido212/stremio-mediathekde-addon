@@ -7,7 +7,7 @@ const logger = require('../logger');
 class PosterFetcher {
     constructor(apiKey, options = {}) {
         this.tmdb = new TMDBClient(apiKey);
-        this.minSimilarity = options.minSimilarity || 0.7; // Minimale Titel-Ähnlichkeit
+        this.minSimilarity = options.minSimilarity || 0.6; // Minimale Titel-Ähnlichkeit (reduziert für mehr Treffer)
         this.cache = new Map(); // In-Memory Cache
         this.stats = {
             requests: 0,
