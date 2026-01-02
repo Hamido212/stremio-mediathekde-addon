@@ -32,43 +32,64 @@ const CATALOGS = [
         type: 'movie',
         id: 'de_new',
         name: '🆕 Neu (30 Tage)',
-        extraSupported: ['genre', 'skip']
+        extra: [
+            { name: 'genre', isRequired: false },
+            { name: 'skip', isRequired: false }
+        ]
     },
     {
         type: 'movie',
         id: 'de_docs',
         name: '📺 Dokus & Reportagen',
-        extraSupported: ['genre', 'skip']
+        extra: [
+            { name: 'genre', isRequired: false },
+            { name: 'skip', isRequired: false }
+        ]
     },
     {
         type: 'movie',
         id: 'de_news',
         name: '📰 Nachrichten & Politik',
-        extraSupported: ['genre', 'skip']
+        extra: [
+            { name: 'genre', isRequired: false },
+            { name: 'skip', isRequired: false }
+        ]
     },
     {
         type: 'movie',
         id: 'de_knowledge',
         name: '🧠 Kultur & Wissen',
-        extraSupported: ['genre', 'skip']
+        extra: [
+            { name: 'genre', isRequired: false },
+            { name: 'skip', isRequired: false }
+        ]
     },
     {
         type: 'movie',
         id: 'de_crime',
         name: '🔍 Krimi & Thriller',
-        extraSupported: ['genre', 'skip']
+        extra: [
+            { name: 'genre', isRequired: false },
+            { name: 'skip', isRequired: false }
+        ]
     },
     {
         type: 'movie',
         id: 'de_kids',
         name: '👶 Kinder',
-        extraSupported: ['genre', 'skip']
+        extra: [
+            { name: 'genre', isRequired: false },
+            { name: 'skip', isRequired: false }
+        ]
     },
     {
         type: 'movie',
         id: 'de_arte',
         name: '🎭 Arte Highlights',
-        extraSupported: ['genre', 'skip']
+        extra: [
+            { name: 'genre', isRequired: false },
+            { name: 'skip', isRequired: false }
+        ]
     },
     {
         type: 'movie',
