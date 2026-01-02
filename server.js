@@ -233,14 +233,42 @@ app.get('/:resource/:type/:id.json', async (req, res) => {
     try {
         const { resource, type, id } = req.params;
         
-        // Extras kommen als Query-Parameter, nicht als JSON im Path
-        const extra = {
-            search: typeof req.query.search === 'string' ? req.query.search : undefined,
-            genre: typeof req.query.genre === 'string' ? req.query.genre : undefined,
-            skip: Number(req.query.skip || 0)
-        };
+        // Parse extra from ID (format: "catalogId:base64json" or "catalogId/key=value/key=value")
+        let catalogId = id;
+        let extra = {};
         
-        const args = { resource, type, id, extra };
+        if (id.includes(':')) {
+            // Base64-encoded JSON (z.B. "de_kids:eyJza2lwIjoyMH0")
+            const parts = id.split(':');
+            catalogId = parts[0];
+            try {
+                const decoded = Buffer.from(parts[1], 'base64').toString('utf8');
+                extra = JSON.parse(decoded);
+            } catch (e) {
+                logger.warn('Failed to parse base64 extra', { id, error: e.message });
+            }
+        } else if (id.includes('/')) {
+            // Key=value pairs (z.B. "de_kids/skip=20")
+            const parts = id.split('/');
+            catalogId = parts[0];
+            for (let i = 1; i < parts.length; i++) {
+                const [key, value] = parts[i].split('=');
+                if (key && value !== undefined) {
+                    extra[key] = isNaN(value) ? value : Number(value);
+                }
+            }
+        }
+        
+        // Fallback: Query-Parameter (für manuelles Testen)
+        if (Object.keys(extra).length === 0) {
+            extra = {
+                search: req.query.search,
+                genre: req.query.genre,
+                skip: Number(req.query.skip || 0)
+            };
+        }
+        
+        const args = { resource, type, id: catalogId, extra };
         let result;
         
         if (resource === 'catalog') {
