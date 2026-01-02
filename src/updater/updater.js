@@ -32,15 +32,26 @@ class Updater {
             // 1. Download (mit Conditional GET)
             const downloadResult = await this._download();
             
+            // 2. Bei 304: Prüfe ob Source-DB existiert und App-DB fehlt oder veraltet ist
             if (!downloadResult.downloaded) {
                 logger.info('Keine neuen Daten verfügbar (304 Not Modified)');
+                
+                const sourceDbPath = path.join(this.config.dataDir, 'source', 'filmliste-v2.db');
+                const appDbPath = path.join(this.config.dataDir, 'app', 'app.db');
+                
+                // Wenn Source-DB existiert aber App-DB fehlt → Import durchführen
+                if (fs.existsSync(sourceDbPath) && !fs.existsSync(appDbPath)) {
+                    logger.info('App-DB fehlt, führe Import von bestehender Source-DB durch');
+                    return await this._importExisting(sourceDbPath, appDbPath);
+                }
+                
                 return { updated: false, reason: 'not_modified' };
             }
 
-            // 2. Decompress
+            // 3. Decompress
             const decompressedPath = await this._decompress(downloadResult.compressedPath);
 
-            // 3. Validate
+            // 4. Validate
             const validationResult = await this._validate(decompressedPath);
             
             if (!validationResult.valid) {
@@ -48,10 +59,10 @@ class Updater {
                 return { updated: false, reason: 'validation_failed', errors: validationResult.errors };
             }
 
-            // 4. Atomic Swap (Source-DB)
+            // 5. Atomic Swap (Source-DB)
             await this._atomicSwap(decompressedPath);
 
-            // 5. Import (Source → App-DB)
+            // 6. Import (Source → App-DB)
             const sourceDbPath = path.join(this.config.dataDir, 'source', 'filmliste-v2.db');
             const appDbPath = path.join(this.config.dataDir, 'app', 'app.db');
             const categoriesPath = path.join(__dirname, '..', 'db', 'categories.json');
@@ -59,7 +70,7 @@ class Updater {
             const importer = new Importer(sourceDbPath, appDbPath, categoriesPath);
             const importResult = await importer.import();
 
-            // 6. Update State
+            // 7. Update State
             this.stateManager.markSuccess({
                 lastModified: downloadResult.metadata.lastModified,
                 etag: downloadResult.metadata.etag,
@@ -152,6 +163,43 @@ class Updater {
         fs.renameSync(tmpDbPath, targetPath);
 
         logger.info('Atomic Swap abgeschlossen', { targetPath });
+    }
+
+    /**
+     * Importiert von bestehender Source-DB (bei 304 und fehlender App-DB)
+     */
+    async _importExisting(sourceDbPath, appDbPath) {
+        const categoriesPath = path.join(__dirname, '..', 'db', 'categories.json');
+        
+        // Validiere Source-DB erst
+        const validationResult = await this._validate(sourceDbPath);
+        
+        if (!validationResult.valid) {
+            logger.error('Source-DB Validierung fehlgeschlagen', { errors: validationResult.errors });
+            return { updated: false, reason: 'validation_failed', errors: validationResult.errors };
+        }
+        
+        // Import durchführen
+        const importer = new Importer(sourceDbPath, appDbPath, categoriesPath);
+        const importResult = await importer.import();
+        
+        // State aktualisieren
+        this.stateManager.markSuccess({
+            rowCount: validationResult.rowCount,
+            maxDateTs: validationResult.maxDateTs,
+            source: 'filmliste-v2.db (existing)'
+        });
+        
+        logger.info('Update-Zyklus erfolgreich abgeschlossen', {
+            rowCount: validationResult.rowCount,
+            maxDateTs: validationResult.maxDateTs,
+            importStats: importResult
+        });
+        
+        return {
+            updated: true,
+            stats: importResult
+        };
     }
 
     /**

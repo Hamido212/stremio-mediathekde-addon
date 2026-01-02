@@ -27,7 +27,11 @@ class Downloader {
                 url,
                 headers,
                 timeout,
-                responseType: 'stream'
+                responseType: 'stream',
+                validateStatus: (status) => {
+                    // Akzeptiere 200-299 und 304 (Not Modified)
+                    return (status >= 200 && status < 300) || status === 304;
+                }
             });
 
             // 304 Not Modified
@@ -145,12 +149,16 @@ class Downloader {
 
             proc.on('close', (code) => {
                 if (code === 0) {
-                    logger.info('Decompression abgeschlossen', {
-                        sourcePath,
-                        destPath,
-                        size: fs.statSync(destPath).size
-                    });
-                    resolve();
+                    if (fs.existsSync(destPath)) {
+                        logger.info('Decompression abgeschlossen', {
+                            sourcePath,
+                            destPath,
+                            size: fs.statSync(destPath).size
+                        });
+                        resolve();
+                    } else {
+                        reject(new Error(`Decompression fehlgeschlagen: Output-Datei wurde nicht erstellt`));
+                    }
                 } else {
                     reject(new Error(`Decompression fehlgeschlagen (code ${code}): ${stderr}`));
                 }
