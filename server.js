@@ -228,7 +228,71 @@ app.get('/:config/manifest.json', (req, res) => {
     }
 });
 
-// Stremio Add-on Routes (catalog, meta, stream)
+// Konfigurierte Stremio Routes (mit Wildcard für komplexe IDs)
+// WICHTIG: MUSS VOR der nicht-konfigurierten Route stehen!
+app.get('/:config/:resource/:type/*.json', async (req, res) => {
+    try {
+        const { config, resource, type } = req.params;
+        const idWithPath = req.params[0];
+        
+        // Parse User Config
+        const userConfig = ConfigHandler.parseConfig(config);
+        
+        // Parse extra from ID (nur für catalog, nicht für meta/stream)
+        let catalogId = idWithPath;
+        let extra = { userConfig };
+        
+        if (resource === 'catalog') {
+            // Nur bei Katalog-Requests extra parsen
+            if (idWithPath.includes(':')) {
+                // Base64-encoded JSON (z.B. "de_kids:eyJza2lwIjoyMH0")
+                const parts = idWithPath.split(':');
+                catalogId = parts[0];
+                try {
+                    const decoded = Buffer.from(parts[1], 'base64').toString('utf8');
+                    extra = { ...extra, ...JSON.parse(decoded) };
+                } catch (e) {
+                    logger.warn('Failed to parse base64 extra', { id: idWithPath, error: e.message });
+                }
+            } else if (idWithPath.includes('/')) {
+                // Key=value pairs (z.B. "de_kids/skip=20")
+                const parts = idWithPath.split('/');
+                catalogId = parts[0];
+                for (let i = 1; i < parts.length; i++) {
+                    const [key, value] = parts[i].split('=');
+                    if (key && value !== undefined) {
+                        extra[key] = isNaN(value) ? value : Number(value);
+                    }
+                }
+            }
+            
+            // Fallback: Query-Parameter
+            if (req.query.search) extra.search = req.query.search;
+            if (req.query.genre) extra.genre = req.query.genre;
+            if (req.query.skip) extra.skip = Number(req.query.skip);
+        }
+        
+        const args = { resource, type, id: catalogId, extra };
+        let result;
+        
+        if (resource === 'catalog') {
+            result = await Handlers.handleCatalog(args);
+        } else if (resource === 'meta') {
+            result = await Handlers.handleMeta(args);
+        } else if (resource === 'stream') {
+            result = await Handlers.handleStream(args);
+        } else {
+            return res.status(404).json({ error: 'Resource not found' });
+        }
+        
+        res.json(result);
+    } catch (error) {
+        logger.error('Configured Request error', { error: error.message, stack: error.stack });
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Stremio Add-on Routes ohne Config (catalog, meta, stream)
 // Verwendet wildcard (*) für id, um Pfade wie "de_kids/skip=20.json" zu unterstützen
 app.get('/:resource/:type/*.json', async (req, res) => {
     try {
@@ -290,69 +354,6 @@ app.get('/:resource/:type/*.json', async (req, res) => {
         res.json(result);
     } catch (error) {
         logger.error('Request error', { error: error.message, stack: error.stack });
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Konfigurierte Stremio Routes (mit Wildcard für komplexe IDs)
-app.get('/:config/:resource/:type/*.json', async (req, res) => {
-    try {
-        const { config, resource, type } = req.params;
-        const idWithPath = req.params[0];
-        
-        // Parse User Config
-        const userConfig = ConfigHandler.parseConfig(config);
-        
-        // Parse extra from ID (nur für catalog, nicht für meta/stream)
-        let catalogId = idWithPath;
-        let extra = { userConfig };
-        
-        if (resource === 'catalog') {
-            // Nur bei Katalog-Requests extra parsen
-            if (idWithPath.includes(':')) {
-                // Base64-encoded JSON (z.B. "de_kids:eyJza2lwIjoyMH0")
-                const parts = idWithPath.split(':');
-                catalogId = parts[0];
-                try {
-                    const decoded = Buffer.from(parts[1], 'base64').toString('utf8');
-                    extra = { ...extra, ...JSON.parse(decoded) };
-                } catch (e) {
-                    logger.warn('Failed to parse base64 extra', { id: idWithPath, error: e.message });
-                }
-            } else if (idWithPath.includes('/')) {
-                // Key=value pairs (z.B. "de_kids/skip=20")
-                const parts = idWithPath.split('/');
-                catalogId = parts[0];
-                for (let i = 1; i < parts.length; i++) {
-                    const [key, value] = parts[i].split('=');
-                    if (key && value !== undefined) {
-                        extra[key] = isNaN(value) ? value : Number(value);
-                    }
-                }
-            }
-            
-            // Fallback: Query-Parameter
-            if (req.query.search) extra.search = req.query.search;
-            if (req.query.genre) extra.genre = req.query.genre;
-            if (req.query.skip) extra.skip = Number(req.query.skip);
-        }
-        
-        const args = { resource, type, id: catalogId, extra };
-        let result;
-        
-        if (resource === 'catalog') {
-            result = await Handlers.handleCatalog(args);
-        } else if (resource === 'meta') {
-            result = await Handlers.handleMeta(args);
-        } else if (resource === 'stream') {
-            result = await Handlers.handleStream(args);
-        } else {
-            return res.status(404).json({ error: 'Resource not found' });
-        }
-        
-        res.json(result);
-    } catch (error) {
-        logger.error('Configured Request error', { error: error.message, stack: error.stack });
         res.status(500).json({ error: error.message });
     }
 });
