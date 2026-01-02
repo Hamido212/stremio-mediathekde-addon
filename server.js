@@ -229,27 +229,30 @@ app.get('/:config/manifest.json', (req, res) => {
 });
 
 // Stremio Add-on Routes (catalog, meta, stream)
-app.get('/:resource/:type/:id.json', async (req, res) => {
+// Verwendet wildcard (*) für id, um Pfade wie "de_kids/skip=20.json" zu unterstützen
+app.get('/:resource/:type/*.json', async (req, res) => {
     try {
-        const { resource, type, id } = req.params;
+        const { resource, type } = req.params;
+        // params[0] enthält den wildcard-Teil (alles zwischen type/ und .json)
+        const idWithPath = req.params[0];
         
         // Parse extra from ID (format: "catalogId:base64json" or "catalogId/key=value/key=value")
-        let catalogId = id;
+        let catalogId = idWithPath;
         let extra = {};
         
-        if (id.includes(':')) {
+        if (idWithPath.includes(':')) {
             // Base64-encoded JSON (z.B. "de_kids:eyJza2lwIjoyMH0")
-            const parts = id.split(':');
+            const parts = idWithPath.split(':');
             catalogId = parts[0];
             try {
                 const decoded = Buffer.from(parts[1], 'base64').toString('utf8');
                 extra = JSON.parse(decoded);
             } catch (e) {
-                logger.warn('Failed to parse base64 extra', { id, error: e.message });
+                logger.warn('Failed to parse base64 extra', { id: idWithPath, error: e.message });
             }
-        } else if (id.includes('/')) {
+        } else if (idWithPath.includes('/')) {
             // Key=value pairs (z.B. "de_kids/skip=20")
-            const parts = id.split('/');
+            const parts = idWithPath.split('/');
             catalogId = parts[0];
             for (let i = 1; i < parts.length; i++) {
                 const [key, value] = parts[i].split('=');
