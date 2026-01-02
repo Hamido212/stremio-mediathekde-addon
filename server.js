@@ -294,23 +294,50 @@ app.get('/:resource/:type/*.json', async (req, res) => {
     }
 });
 
-// Konfigurierte Stremio Routes
-app.get('/:config/:resource/:type/:id.json', async (req, res) => {
+// Konfigurierte Stremio Routes (mit Wildcard für komplexe IDs)
+app.get('/:config/:resource/:type/*.json', async (req, res) => {
     try {
-        const { config, resource, type, id } = req.params;
-        
-        // Extras kommen als Query-Parameter
-        const extra = {
-            search: typeof req.query.search === 'string' ? req.query.search : undefined,
-            genre: typeof req.query.genre === 'string' ? req.query.genre : undefined,
-            skip: Number(req.query.skip || 0)
-        };
+        const { config, resource, type } = req.params;
+        const idWithPath = req.params[0];
         
         // Parse User Config
         const userConfig = ConfigHandler.parseConfig(config);
         
-        // Add config to extra
-        const args = { resource, type, id, extra: { ...extra, userConfig } };
+        // Parse extra from ID (nur für catalog, nicht für meta/stream)
+        let catalogId = idWithPath;
+        let extra = { userConfig };
+        
+        if (resource === 'catalog') {
+            // Nur bei Katalog-Requests extra parsen
+            if (idWithPath.includes(':')) {
+                // Base64-encoded JSON (z.B. "de_kids:eyJza2lwIjoyMH0")
+                const parts = idWithPath.split(':');
+                catalogId = parts[0];
+                try {
+                    const decoded = Buffer.from(parts[1], 'base64').toString('utf8');
+                    extra = { ...extra, ...JSON.parse(decoded) };
+                } catch (e) {
+                    logger.warn('Failed to parse base64 extra', { id: idWithPath, error: e.message });
+                }
+            } else if (idWithPath.includes('/')) {
+                // Key=value pairs (z.B. "de_kids/skip=20")
+                const parts = idWithPath.split('/');
+                catalogId = parts[0];
+                for (let i = 1; i < parts.length; i++) {
+                    const [key, value] = parts[i].split('=');
+                    if (key && value !== undefined) {
+                        extra[key] = isNaN(value) ? value : Number(value);
+                    }
+                }
+            }
+            
+            // Fallback: Query-Parameter
+            if (req.query.search) extra.search = req.query.search;
+            if (req.query.genre) extra.genre = req.query.genre;
+            if (req.query.skip) extra.skip = Number(req.query.skip);
+        }
+        
+        const args = { resource, type, id: catalogId, extra };
         let result;
         
         if (resource === 'catalog') {
