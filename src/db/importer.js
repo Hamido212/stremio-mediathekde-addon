@@ -6,6 +6,7 @@ const Classifier = require('./classifier');
 const AppDB = require('./app-db');
 const logger = require('../logger');
 const senderLogos = require('../sender-logos');
+const PosterFetcher = require('../tmdb/poster-fetcher');
 
 // MediathekView Channel ID → Name Mapping
 const CHANNEL_ID_MAP = {
@@ -42,10 +43,14 @@ const CHANNEL_ID_MAP = {
 };
 
 class Importer {
-    constructor(sourceDbPath, appDbPath, categoriesConfigPath) {
+    constructor(sourceDbPath, appDbPath, categoriesConfigPath, options = {}) {
         this.sourceDbPath = sourceDbPath;
         this.appDbPath = appDbPath;
         this.classifier = new Classifier(categoriesConfigPath);
+        this.posterFetcher = options.tmdbApiKey 
+            ? new PosterFetcher(options.tmdbApiKey, { minSimilarity: 0.7 })
+            : null;
+        this.enablePosterFetch = !!options.tmdbApiKey;
     }
 
     /**
@@ -106,10 +111,16 @@ class Importer {
                 appDb.insertBulk(items);
             }
 
-            // 6. Cleanup (alte Items löschen)
+            // 6. Poster-Fetching (optional, nach Import)
+            if (this.enablePosterFetch && this.posterFetcher) {
+                logger.info('Starte TMDB Poster-Fetching...');
+                await this._fetchPosters(appDb);
+            }
+
+            // 7. Cleanup (alte Items löschen)
             const deleted = appDb.deleteOldItems(90);
 
-            // 7. Stats
+            // 8. Stats
             const stats = appDb.getStats();
 
             sourceDb.close();
@@ -225,8 +236,8 @@ class Importer {
                 description: row.description
             });
 
-            // Poster (Logo) mapping
-            const poster = senderLogos[channel] || null;
+            // Poster wird später von TMDB geholt (falls aktiviert)
+            const poster = null;
 
             // ID generieren
             const id = AppDB.generateId(channel, url_website, url_video, title, date_ts);
@@ -254,6 +265,60 @@ class Importer {
                 row
             });
             return null;
+        }
+    }
+
+    /**
+     * Lädt Poster von TMDB für Items ohne Poster
+     */
+    async _fetchPosters(appDb) {
+        try {
+            // Hole Items ohne Poster (Sample: 1000 Items, priorisiere neue)
+            const db = appDb.db;
+            const itemsWithoutPoster = db.prepare(`
+                SELECT id, title, channel, topic, date_ts 
+                FROM items 
+                WHERE poster IS NULL 
+                ORDER BY date_ts DESC 
+                LIMIT 1000
+            `).all();
+
+            if (itemsWithoutPoster.length === 0) {
+                logger.info('Keine Items ohne Poster gefunden');
+                return;
+            }
+
+            logger.info('Fetching Poster', { 
+                count: itemsWithoutPoster.length,
+                estimated: `${Math.round(itemsWithoutPoster.length / 4)} Sekunden`
+            });
+
+            // Batch-Process
+            const updateStmt = db.prepare('UPDATE items SET poster = ? WHERE id = ?');
+            let updated = 0;
+
+            for (const item of itemsWithoutPoster) {
+                const poster = await this.posterFetcher.fetchPoster(item);
+                
+                if (poster) {
+                    updateStmt.run(poster, item.id);
+                    updated++;
+                }
+            }
+
+            // Stats
+            const stats = this.posterFetcher.getStats();
+            
+            logger.info('Poster-Fetching abgeschlossen', {
+                processed: itemsWithoutPoster.length,
+                updated,
+                ...stats
+            });
+
+        } catch (error) {
+            logger.error('Poster-Fetching fehlgeschlagen', {
+                error: error.message
+            });
         }
     }
 }

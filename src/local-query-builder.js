@@ -35,6 +35,12 @@ class LocalQueryBuilder {
         let sql = 'SELECT * FROM items WHERE date_ts >= ?';
         const params = [thirtyDaysAgo];
 
+        // Mindestdauer-Filter
+        if (filters.minDuration) {
+            sql += ' AND duration_sec >= ?';
+            params.push(filters.minDuration * 60); // Minuten in Sekunden
+        }
+
         // Genre-Filter (Sender oder Kategorie)
         if (filters.genre) {
             if (this._isSender(filters.genre)) {
@@ -64,6 +70,12 @@ class LocalQueryBuilder {
         let sql = 'SELECT * FROM items WHERE category = ?';
         const params = [category];
 
+        // Mindestdauer-Filter
+        if (filters.minDuration) {
+            sql += ' AND duration_sec >= ?';
+            params.push(filters.minDuration * 60); // Minuten in Sekunden
+        }
+
         // Genre-Filter zusätzlich
         if (filters.genre) {
             if (this._isSender(filters.genre)) {
@@ -90,6 +102,12 @@ class LocalQueryBuilder {
         let sql = 'SELECT * FROM items WHERE channel = ?';
         const params = [sender];
 
+        // Mindestdauer-Filter
+        if (filters.minDuration) {
+            sql += ' AND duration_sec >= ?';
+            params.push(filters.minDuration * 60); // Minuten in Sekunden
+        }
+
         sql += ' ORDER BY date_ts DESC LIMIT ? OFFSET ?';
         params.push(limit, skip);
 
@@ -115,6 +133,12 @@ class LocalQueryBuilder {
             WHERE items_fts MATCH ?
         `;
         const params = [sanitized];
+
+        // Mindestdauer-Filter
+        if (filters.minDuration) {
+            sql += ' AND items.duration_sec >= ?';
+            params.push(filters.minDuration * 60); // Minuten in Sekunden
+        }
 
         // Genre-Filter
         if (filters.genre) {

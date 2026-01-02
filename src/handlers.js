@@ -19,13 +19,13 @@ class Handlers {
         logger.info('Catalog Request', { catalogId, genre: extra.genre, search: extra.search, skip: extra.skip });
 
         try {
-            // Cache-Key erstellen
+            // Cache-Key erstellen (including minDuration in key)
             const cacheKey = cache.constructor.makeCatalogKey(
                 catalogId,
                 extra.genre,
                 extra.search,
                 extra.skip
-            );
+            ) + (extra.minDuration ? `-min${extra.minDuration}` : '');
 
             // TTL basierend auf Katalog
             const ttl = catalogId === 'de_new' 
@@ -136,7 +136,8 @@ class Handlers {
             genre: extra.genre,
             search: extra.search,
             skip: parseInt(extra.skip) || 0,
-            limit: 20
+            limit: 20,
+            minDuration: parseInt(extra.minDuration) || 0
         };
 
         let items = [];
@@ -207,8 +208,9 @@ class Handlers {
             type: 'movie',
             name: item.title || 'Unbekannt',
             description: this._buildFullDescription(item),
-            poster: item.poster || senderLogos.getLogo(item.channel),
-            background: item.poster || senderLogos.getLogo(item.channel),
+            poster: item.poster || null, // Kein Sender-Logo als Poster
+            background: item.poster || null, // Auch kein Sender-Logo als Background
+            logo: item.poster ? null : senderLogos.getLogo(item.channel), // Logo separat
             releaseInfo: item.date_ts 
                 ? new Date(item.date_ts * 1000).toLocaleDateString('de-DE')
                 : null,
@@ -227,7 +229,7 @@ class Handlers {
             id: item.id,
             type: 'movie',
             name: item.title || 'Unbekannt',
-            poster: item.poster || senderLogos.getLogo(item.channel),
+            poster: item.poster || null, // Kein Sender-Logo als Fallback, nur echte Poster
             description: item.description ? item.description.substring(0, 200) + '...' : null,
             releaseInfo: item.date_ts 
                 ? new Date(item.date_ts * 1000).getFullYear().toString()

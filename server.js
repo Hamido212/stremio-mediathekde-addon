@@ -270,6 +270,9 @@ app.get('/:config/:resource/:type/*.json', async (req, res) => {
             if (req.query.search) extra.search = req.query.search;
             if (req.query.genre) extra.genre = req.query.genre;
             if (req.query.skip) extra.skip = Number(req.query.skip);
+            
+            // User-Config Parameter hinzufügen
+            extra.minDuration = userConfig.minDuration;
         }
         
         const args = { resource, type, id: catalogId, extra };

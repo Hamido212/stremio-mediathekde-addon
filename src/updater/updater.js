@@ -7,6 +7,7 @@ const Downloader = require('./downloader');
 const Validator = require('./validator');
 const Importer = require('../db/importer');
 const logger = require('../logger');
+const config = require('../config');
 
 class Updater {
     constructor(config) {
@@ -67,7 +68,9 @@ class Updater {
             const appDbPath = path.join(this.config.dataDir, 'app', 'app.db');
             const categoriesPath = path.join(__dirname, '..', 'db', 'categories.json');
 
-            const importer = new Importer(sourceDbPath, appDbPath, categoriesPath);
+            const importer = new Importer(sourceDbPath, appDbPath, categoriesPath, {
+                tmdbApiKey: config.TMDB_API_KEY
+            });
             const importResult = await importer.import();
 
             // 7. Update State
@@ -180,7 +183,9 @@ class Updater {
         }
         
         // Import durchführen
-        const importer = new Importer(sourceDbPath, appDbPath, categoriesPath);
+        const importer = new Importer(sourceDbPath, appDbPath, categoriesPath, {
+            tmdbApiKey: config.TMDB_API_KEY
+        });
         const importResult = await importer.import();
         
         // State aktualisieren

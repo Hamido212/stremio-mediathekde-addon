@@ -7,6 +7,10 @@ module.exports = {
     // Server Port
     PORT: process.env.PORT || 7005,
     
+    // TMDB API Key (optional, für Poster-Fetching)
+    // Registriere dich kostenlos auf https://www.themoviedb.org/settings/api
+    TMDB_API_KEY: process.env.TMDB_API_KEY || null,
+    
     // Cache-Einstellungen (in Sekunden)
     CACHE_TTL: {
         NEW_CONTENT: 10 * 60,        // 10 Minuten für neue Inhalte
