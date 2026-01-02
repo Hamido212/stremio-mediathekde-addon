@@ -210,9 +210,9 @@ class Importer {
                 date_ts = Math.floor(new Date(date_ts).getTime() / 1000);
             }
             
-            // Validiere Timestamp (plausibel zwischen 2000 und heute+1 Jahr)
+            // Validiere Timestamp (plausibel zwischen 2000 und heute - nur Vergangenheit)
             const MIN_TS = 946684800;  // 1.1.2000
-            const MAX_TS = Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60); // Heute + 1 Jahr
+            const MAX_TS = Math.floor(Date.now() / 1000); // Jetzt (keine Zukunft)
             if (!date_ts || date_ts < MIN_TS || date_ts > MAX_TS) {
                 date_ts = null;
             }
