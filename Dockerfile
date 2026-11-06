@@ -1,33 +1,37 @@
-# Verwende offizielles Node.js 18 Alpine Image (klein & effizient)
-FROM node:18-alpine
+# syntax=docker/dockerfile:1
 
-# Installiere bzip2 für Dekompression
-RUN apk add --no-cache bzip2
-
-# Setze Arbeitsverzeichnis
+# ---- Abhängigkeiten (inkl. nativer better-sqlite3-Binaries) ----
+FROM node:22-alpine AS deps
+# Build-Tools nur für diese Stage: better-sqlite3 wird kompiliert, falls kein
+# vorgefertigtes Binary für die Plattform existiert (z.B. musl/arm64).
+RUN apk add --no-cache python3 make g++
 WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Kopiere package.json und package-lock.json
-COPY package*.json ./
+# ---- Laufzeit-Image ----
+FROM node:22-alpine
+# bzip2 zum Entpacken der Filmliste (deutlich schneller als die JS-Variante)
+RUN apk add --no-cache bzip2 tini su-exec
+WORKDIR /app
+ENV NODE_ENV=production \
+    PORT=7005 \
+    DATA_DIR=/app/data \
+    UPDATE_INTERVAL_HOURS=6
 
-# Installiere Abhängigkeiten (Production only)
-RUN npm ci --only=production
-
-# Kopiere Anwendungscode
-COPY server.js ./
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json server.js ./
 COPY src ./src
+COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-# Exponiere Port 7005
+# Startet als root, korrigiert die Rechte von /app/data und wechselt dann zu
+# PUID:PGID (Standard 1000:1000 = Benutzer "node"), siehe docker-entrypoint.sh
+RUN mkdir -p /app/data && chown -R node:node /app/data
+VOLUME ["/app/data"]
 EXPOSE 7005
 
-# Umgebungsvariablen
-ENV PORT=7005
-ENV NODE_ENV=production
-ENV LOG_LEVEL=INFO
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:${PORT}/health >/dev/null || exit 1
 
-# Healthcheck (prüfe ob Server läuft)
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:7005/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
-
-# Starte Server
+ENTRYPOINT ["/sbin/tini", "--", "docker-entrypoint.sh"]
 CMD ["node", "server.js"]

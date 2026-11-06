@@ -1,0 +1,31 @@
+name: Vercel – Daten aktualisieren
+
+# Stößt alle 6 Stunden einen neuen Vercel-Build an. Der Build lädt die aktuelle
+# MediathekView-Filmliste, Live-TV- und Radio-Listen und baut daraus die
+# SQLite-Datenbank, die mit dem Deployment ausgeliefert wird.
+#
+# Einrichtung: Vercel → Project → Settings → Git → Deploy Hooks → Hook für
+# "main" anlegen und die URL als Repository-Secret VERCEL_DEPLOY_HOOK_URL speichern.
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vercel-Build auslösen
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::warning::Secret VERCEL_DEPLOY_HOOK_URL fehlt – siehe docs/VERCEL.md"
+            exit 0
+          fi
+          curl --fail --silent --show-error -X POST "$HOOK"
+          echo "Neuer Vercel-Build wurde angestoßen."

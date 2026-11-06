@@ -1,0 +1,5 @@
+# Lokale Entwicklungsdaten nicht hochladen (Vercel baut .data/ beim Build selbst)
+data
+test
+docs
+.claude
