@@ -1,200 +1,89 @@
-// Downloader - Download mit Conditional GET und Decompression
+'use strict';
 
-const axios = require('axios');
+// Download (mit Conditional GET) und bz2-Entpacken der MediathekView-Filmliste.
+
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
-const unbzip2Stream = require('unbzip2-stream');
+const { spawn, spawnSync } = require('child_process');
+const { pipeline } = require('stream/promises');
+const { Readable } = require('stream');
+const config = require('../config');
 const logger = require('../logger');
 
-class Downloader {
-    /**
-     * Lädt eine Datei mit Conditional GET herunter
-     * @param {string} url - Download-URL
-     * @param {string} destPath - Ziel-Pfad
-     * @param {Object} options - { headers, timeout }
-     * @returns {Object} - { downloaded: boolean, headers: {...} }
-     */
-    static async download(url, destPath, options = {}) {
-        try {
-            const headers = options.headers || {};
-            const timeout = options.timeout || 120000; // 2 Minuten
+/**
+ * Lädt `url` nach `destPath`. Gibt { notModified: true } zurück, wenn der
+ * Server 304 liefert (ETag/Last-Modified unverändert).
+ */
+async function download(url, destPath, { etag, lastModified, timeoutMs = 15 * 60 * 1000 } = {}) {
+    const headers = { 'User-Agent': config.HTTP_USER_AGENT };
+    if (etag) headers['If-None-Match'] = etag;
+    if (lastModified) headers['If-Modified-Since'] = lastModified;
 
-            logger.info('Download gestartet', { url, destPath });
-
-            const response = await axios({
-                method: 'GET',
-                url,
-                headers,
-                timeout,
-                responseType: 'stream',
-                validateStatus: (status) => {
-                    // Akzeptiere 200-299 und 304 (Not Modified)
-                    return (status >= 200 && status < 300) || status === 304;
-                }
-            });
-
-            // 304 Not Modified
-            if (response.status === 304) {
-                logger.info('Datei unverändert (304)', { url });
-                return {
-                    downloaded: false,
-                    status: 304,
-                    headers: response.headers
-                };
-            }
-
-            // Download ausführen
-            const dir = path.dirname(destPath);
-            if (!fs.existsSync(dir)) {
-                fs.mkdirSync(dir, { recursive: true });
-            }
-
-            const writer = fs.createWriteStream(destPath);
-            response.data.pipe(writer);
-
-            await new Promise((resolve, reject) => {
-                writer.on('finish', resolve);
-                writer.on('error', reject);
-            });
-
-            logger.info('Download abgeschlossen', {
-                url,
-                destPath,
-                size: fs.statSync(destPath).size
-            });
-
-            return {
-                downloaded: true,
-                status: response.status,
-                headers: response.headers,
-                size: fs.statSync(destPath).size
-            };
-
-        } catch (error) {
-            logger.error('Download fehlgeschlagen', {
-                url,
-                error: error.message,
-                status: error.response?.status
-            });
-            throw error;
-        }
+    const response = await fetch(url, { headers, signal: AbortSignal.timeout(timeoutMs) });
+    if (response.status === 304) {
+        await response.body?.cancel();
+        return { notModified: true };
+    }
+    if (!response.ok) {
+        throw new Error(`Download fehlgeschlagen: HTTP ${response.status} ${response.statusText}`);
     }
 
-    /**
-     * Entpackt .bz2-Datei (via bzip2/7z/tar oder Node.js unbzip2-stream)
-     * @param {string} sourcePath - .bz2 Datei
-     * @param {string} destPath - Entpacktes Ziel
-     * @returns {Promise<void>}
-     */
-    static async decompressBz2(sourcePath, destPath) {
-        return new Promise((resolve, reject) => {
-            logger.info('Decompression gestartet', { sourcePath, destPath });
+    fs.mkdirSync(path.dirname(destPath), { recursive: true });
+    const partial = destPath + '.part';
+    await pipeline(Readable.fromWeb(response.body), fs.createWriteStream(partial));
+    fs.renameSync(partial, destPath);
 
-            // Versuche verschiedene Tools (platform-abhängig)
-            let command, args, useExternalTool = true;
-
-            if (process.platform === 'win32') {
-                // Windows: bevorzuge Node.js unbzip2-stream (sicherer als tar/7z)
-                logger.info('Windows erkannt, verwende unbzip2-stream');
-                useExternalTool = false;
-            } else {
-                // Linux/Mac: bzip2 (zuverlässiger als unbzip2-stream)
-                if (this._commandExists('bzip2')) {
-                    command = 'bzip2';
-                    args = ['-d', '-c', sourcePath];
-                } else {
-                    logger.info('bzip2 nicht gefunden, verwende unbzip2-stream');
-                    useExternalTool = false;
-                }
-            }
-
-            // Fallback: Node.js Stream-basiert
-            if (!useExternalTool) {
-                try {
-                    const reader = fs.createReadStream(sourcePath);
-                    const writer = fs.createWriteStream(destPath);
-                    const decompressor = unbzip2Stream();
-
-                    reader
-                        .pipe(decompressor)
-                        .pipe(writer)
-                        .on('finish', () => {
-                            logger.info('Decompression abgeschlossen (unbzip2-stream)', {
-                                sourcePath,
-                                destPath,
-                                size: fs.statSync(destPath).size
-                            });
-                            resolve();
-                        })
-                        .on('error', (error) => {
-                            reject(new Error(`Decompression fehlgeschlagen: ${error.message}`));
-                        });
-                } catch (error) {
-                    reject(new Error(`Decompression-Fehler: ${error.message}`));
-                }
-                return;
-            }
-
-            // External Tool
-            const proc = spawn(command, args);
-            const writer = fs.createWriteStream(destPath);
-
-            proc.stdout.pipe(writer);
-
-            let stderr = '';
-            proc.stderr.on('data', (data) => {
-                stderr += data.toString();
-            });
-
-            proc.on('close', (code) => {
-                if (code === 0) {
-                    if (fs.existsSync(destPath)) {
-                        logger.info('Decompression abgeschlossen', {
-                            sourcePath,
-                            destPath,
-                            size: fs.statSync(destPath).size
-                        });
-                        resolve();
-                    } else {
-                        reject(new Error(`Decompression fehlgeschlagen: Output-Datei wurde nicht erstellt`));
-                    }
-                } else {
-                    reject(new Error(`Decompression fehlgeschlagen (code ${code}): ${stderr}`));
-                }
-            });
-
-            proc.on('error', (error) => {
-                reject(new Error(`Decompression-Fehler: ${error.message}`));
-            });
-        });
-    }
-
-    /**
-     * Prüft ob Command existiert (cross-platform)
-     */
-    static _commandExists(cmd) {
-        try {
-            const whichCmd = process.platform === 'win32' ? 'where' : 'which';
-            const result = require('child_process').spawnSync(whichCmd, [cmd], { 
-                stdio: 'ignore',
-                shell: process.platform === 'win32' 
-            });
-            return result.status === 0;
-        } catch {
-            return false;
-        }
-    }
-
-    /**
-     * Extrahiert Last-Modified und ETag aus Response-Headers
-     */
-    static extractMetadata(headers) {
-        return {
-            lastModified: headers['last-modified'] || null,
-            etag: headers['etag'] || null
-        };
-    }
+    return {
+        notModified: false,
+        size: fs.statSync(destPath).size,
+        etag: response.headers.get('etag'),
+        lastModified: response.headers.get('last-modified')
+    };
 }
 
-module.exports = Downloader;
+function findTool() {
+    for (const tool of ['lbzip2', 'pbzip2', 'bzip2']) {
+        try {
+            const probe = spawnSync(tool, ['--help'], { stdio: 'ignore', timeout: 5000 });
+            if (!probe.error) return tool;
+        } catch { /* nicht vorhanden */ }
+    }
+    return null;
+}
+
+/** Entpackt eine .bz2-Datei – bevorzugt mit nativem (paralellem) bzip2. */
+async function decompressBz2(sourcePath, destPath) {
+    const tool = findTool();
+    const started = Date.now();
+    const partial = destPath + '.part';
+
+    if (tool) {
+        await new Promise((resolve, reject) => {
+            const proc = spawn(tool, ['-d', '-c', sourcePath], { stdio: ['ignore', 'pipe', 'pipe'] });
+            const out = fs.createWriteStream(partial);
+            let stderr = '';
+            proc.stderr.on('data', (chunk) => { stderr += chunk; });
+            proc.stdout.pipe(out);
+            proc.on('error', reject);
+            out.on('error', reject);
+            proc.on('close', (code) => {
+                if (code !== 0) return reject(new Error(`${tool} beendet mit Code ${code}: ${stderr.trim()}`));
+                out.on('finish', resolve);
+                if (out.writableFinished) resolve();
+            });
+        });
+    } else {
+        logger.warn('Kein bzip2 gefunden – nutze langsameres JavaScript-Entpacken');
+        const unbzip2 = require('unbzip2-stream');
+        await pipeline(fs.createReadStream(sourcePath), unbzip2(), fs.createWriteStream(partial));
+    }
+
+    fs.renameSync(partial, destPath);
+    logger.info('Filmliste entpackt', {
+        tool: tool || 'unbzip2-stream',
+        seconds: Math.round((Date.now() - started) / 1000),
+        sizeMB: Math.round(fs.statSync(destPath).size / 1048576)
+    });
+}
+
+module.exports = { download, decompressBz2 };

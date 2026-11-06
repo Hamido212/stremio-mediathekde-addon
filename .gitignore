@@ -3,7 +3,6 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
 
 # Environment
 .env
@@ -26,3 +25,10 @@ logs/
 
 # Data & DB
 data/
+
+# Lokale Tool-Konfiguration
+.claude/
+
+# Build-Ausgabe für Vercel (scripts/build-data.js)
+.data/
+.vercel/

@@ -1,46 +1,29 @@
-// Logger mit strukturiertem Output
+'use strict';
 
-const LOG_LEVELS = {
-    ERROR: 0,
-    WARN: 1,
-    INFO: 2,
-    DEBUG: 3
-};
+// Minimaler strukturierter Logger (JSON-Zeilen in Produktion, lesbar in der Konsole).
 
-const currentLevel = LOG_LEVELS[process.env.LOG_LEVEL || 'INFO'];
+const LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
+const configured = (process.env.LOG_LEVEL || 'info').toLowerCase();
+const threshold = LEVELS[configured] ?? LEVELS.info;
+const pretty = process.env.LOG_FORMAT === 'pretty' || (process.stdout.isTTY && process.env.NODE_ENV !== 'production');
+const silent = process.env.NODE_ENV === 'test' && !process.env.LOG_LEVEL;
 
-class Logger {
-    log(level, message, data = {}) {
-        if (LOG_LEVELS[level] > currentLevel) {
-            return;
-        }
-
-        const timestamp = new Date().toISOString();
-        const logEntry = {
-            timestamp,
-            level,
-            message,
-            ...data
-        };
-
-        console.log(JSON.stringify(logEntry));
+function write(level, message, data) {
+    if (silent || LEVELS[level] > threshold) return;
+    const ts = new Date().toISOString();
+    if (pretty) {
+        const extra = data && Object.keys(data).length ? ' ' + JSON.stringify(data) : '';
+        const line = `${ts.slice(11, 19)} ${level.toUpperCase().padEnd(5)} ${message}${extra}`;
+        (level === 'error' ? console.error : console.log)(line);
+        return;
     }
-
-    error(message, data) {
-        this.log('ERROR', message, data);
-    }
-
-    warn(message, data) {
-        this.log('WARN', message, data);
-    }
-
-    info(message, data) {
-        this.log('INFO', message, data);
-    }
-
-    debug(message, data) {
-        this.log('DEBUG', message, data);
-    }
+    const entry = JSON.stringify({ ts, level, msg: message, ...data });
+    (level === 'error' ? console.error : console.log)(entry);
 }
 
-module.exports = new Logger();
+module.exports = {
+    error: (msg, data) => write('error', msg, data),
+    warn: (msg, data) => write('warn', msg, data),
+    info: (msg, data) => write('info', msg, data),
+    debug: (msg, data) => write('debug', msg, data)
+};

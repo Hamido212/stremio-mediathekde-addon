@@ -1,14 +1,9 @@
-# .dockerignore - Verhindert dass unnötige Dateien ins Image kopiert werden
-node_modules/
-npm-debug.log
-.git/
-.gitignore
-README.md
+node_modules
+data
+test
+.git
+.github
+.claude
 .env
-.env.local
-test-*.js
-*.log
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
+*.md
+npm-debug.log

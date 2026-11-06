@@ -1,12 +1,16 @@
 {
   "name": "stremio-mediathek-addon",
-  "version": "2.0.0",
-  "description": "Stremio Add-on für deutsche Mediatheken (ARD, ZDF, Arte, etc.) mit lokaler SQLite-Datenbank",
+  "version": "3.0.1",
+  "description": "Stremio Add-on für die deutschen öffentlich-rechtlichen Mediatheken (ARD, ZDF, ARTE, 3sat, …), Live-TV und Radio – basierend auf MediathekView, iptv-org und radio-browser.info",
   "main": "server.js",
+  "private": true,
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "update": "node src/updater/updater.js"
+    "dev": "node --watch server.js",
+    "update": "node src/updater/cli.js",
+    "test": "node --test \"test/*.test.js\"",
+    "vercel-build": "node scripts/build-data.js",
+    "build:data": "node scripts/build-data.js"
   },
   "keywords": [
     "stremio",
@@ -15,20 +19,23 @@
     "ard",
     "zdf",
     "arte",
-    "german",
+    "live-tv",
+    "radio",
     "mediathekview",
     "sqlite"
   ],
-  "author": "",
+  "author": "Hamido212",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Hamido212/stremio-mediathekde-addon.git"
+  },
   "dependencies": {
-    "axios": "^1.13.2",
-    "better-sqlite3": "^11.10.0",
-    "express": "^4.18.2",
-    "stremio-addon-sdk": "^1.6.10",
+    "better-sqlite3": "^13.0.3",
+    "express": "^5.3.0",
     "unbzip2-stream": "^1.4.3"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=22"
   }
 }
